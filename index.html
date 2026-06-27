@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Chat - Album Media</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="server-warning" style="display: none; background: #ea4335; color: white; padding: 20px; text-align: center; position: fixed; top: 0; width: 100%; z-index: 9999;">
+        <strong>PERINGATAN:</strong> Aplikasi ini harus dijalankan melalui Local Web Server (seperti Live Server).
+    </div>
+    <script>if (window.location.protocol === 'file:') document.getElementById('server-warning').style.display = 'block';</script>
+
+    <div id="toast-container"></div>
+
+    <div id="lightbox" class="lightbox-overlay">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <button class="lightbox-nav nav-left" onclick="navigateLightbox(-1)">❮</button>
+        <div class="lightbox-content" id="lightbox-content"></div>
+        <button class="lightbox-nav nav-right" onclick="navigateLightbox(1)">❯</button>
+        <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+    </div>
+
+    <div class="app-container">
+        <div id="auth-screen">
+            <div class="auth-box">
+                <h2 id="auth-title">Masuk ke Chat</h2>
+                <input type="text" id="auth-username" placeholder="Username (Hanya untuk daftar)" style="display: none;">
+                <input type="email" id="auth-email" placeholder="Email">
+                <input type="password" id="auth-password" placeholder="Password">
+                <button class="btn-primary" id="auth-btn" style="width: 100%; margin-bottom: 10px;">Masuk</button>
+                <p class="auth-toggle" id="auth-toggle-btn">Belum punya akun? Daftar di sini</p>
+            </div>
+        </div>
+
+        <div id="main-app">
+            <aside class="sidebar">
+                <header class="sidebar-header">
+                    <div id="profile-trigger" class="profile-trigger">
+                        <div class="avatar" id="my-avatar">?</div>
+                        <div>
+                            <h2>Pesan</h2>
+                            <small id="current-user-info">Memuat...</small>
+                        </div>
+                    </div>
+                    <div class="menu-buttons">
+                        <button class="btn-icon" onclick="document.getElementById('modal-add-contact').style.display='flex'" title="Tambah Kontak / Gabung Grup">👤+</button>
+                        <button class="btn-icon" onclick="document.getElementById('modal-create-group').style.display='flex'" title="Buat Grup">👥+</button>
+                    </div>
+                </header>
+                <div class="chat-list" id="chat-list"></div>
+            </aside>
+
+            <main class="chat-window">
+                <header class="chat-header" id="chat-header" style="display: none;">
+                    <div class="chat-header-info">
+                        <div class="avatar" id="chat-header-avatar">?</div>
+                        <h2 id="chat-header-name">Pilih Percakapan</h2>
+                    </div>
+                    <div id="group-actions" style="display: none;">
+                        <button class="btn-info-circle" id="btn-group-info" title="Info & Pengaturan Grup">!</button>
+                    </div>
+                </header>
+                
+                <div id="kick-warning-banner" class="kick-warning-banner" style="display: none;">
+                    ⚠️ Anda akan dikeluarkan dari grup ini dalam waktu: <span id="kick-countdown">00:00:00</span>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <p style="text-align: center; color: #80868b; margin-top: 50px;">Pilih obrolan dari sebelah kiri.</p>
+                </div>
+                <div id="loading-more" style="display: none; text-align: center; font-size: 0.8rem; color: #1a73e8; padding: 10px;">Memuat pesan lama...</div>
+                
+                <footer class="chat-input-area" id="chat-input-area" style="display: none;">
+                    <label for="file-input" class="attach-btn" title="Kirim Gambar/Video">📎</label>
+                    <input type="file" id="file-input" accept="image/*,video/*" multiple style="display: none;">
+                    <input type="text" id="message-input" placeholder="Ketik pesan..." autocomplete="off">
+                    <button class="send-btn" id="send-button">Kirim</button>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-profile">
+        <div class="modal" style="text-align: center;">
+            <h3>Profil Saya</h3>
+            <div class="avatar avatar-lg" id="profile-modal-avatar">?</div>
+            <label class="btn-secondary btn-sm" style="display: inline-block; cursor: pointer; margin-bottom: 10px;">
+                📷 Ubah Foto Profil
+                <input type="file" id="user-pp-input" accept="image/*" style="display: none;">
+            </label>
+            <h2 id="profile-modal-username" style="color: #202124; margin-top: 5px;">Username</h2>
+            <p id="profile-modal-email" style="color: #5f6368; margin-bottom: 20px;">email@domain.com</p>
+            <button class="btn-primary btn-danger" style="width: 100%; margin-bottom: 10px;" id="logout-btn">Keluar Akun</button>
+            <button class="btn-secondary" style="width: 100%;" onclick="document.getElementById('modal-profile').style.display='none'">Tutup</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-add-contact">
+        <div class="modal">
+            <h3>Tambah / Gabung</h3>
+            <input type="text" id="contact-target" placeholder="Username / Email / Kode Grup (4 Huruf)">
+            <button class="btn-primary" style="width: 100%; margin-bottom: 10px;" id="btn-add-contact">Lanjutkan</button>
+            <button class="btn-secondary" style="width: 100%;" onclick="document.getElementById('modal-add-contact').style.display='none'">Batal</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-create-group">
+        <div class="modal">
+            <h3>Buat Grup Baru</h3>
+            <input type="text" id="group-name-input" placeholder="Nama Grup">
+            <button class="btn-primary" style="width: 100%; margin-bottom: 10px;" id="btn-create-group">Buat Grup</button>
+            <button class="btn-secondary" style="width: 100%;" onclick="document.getElementById('modal-create-group').style.display='none'">Batal</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-group-info">
+        <div class="modal">
+            <h3 id="modal-group-title">Info Grup</h3>
+            <div id="admin-controls" class="admin-panel" style="display: none;">
+                <div class="code-box">
+                    <span style="font-size: 0.8rem; color: #5f6368;">Kode Undangan Grup (Rahasia):</span><br>
+                    <strong id="display-group-code" style="font-size: 1.6rem; color: #1a73e8; letter-spacing: 4px;">----</strong>
+                </div>
+                <h4 style="margin-bottom:10px;">Pengaturan Admin</h4>
+                <input type="text" id="edit-group-name" placeholder="Nama Grup Baru">
+                <label class="btn-secondary btn-sm" style="display: block; text-align: center; cursor: pointer; margin-bottom: 10px;">
+                    📷 Ubah Foto Grup
+                    <input type="file" id="edit-group-pp" accept="image/*" style="display: none;">
+                </label>
+                <button class="btn-primary btn-sm" style="width:100%;" id="btn-save-group-settings">Simpan Perubahan</button>
+                <hr style="margin: 15px 0; border:0; border-top: 1px solid #ddd;">
+                <input type="text" id="new-member-target" placeholder="Username / Email">
+                <button class="btn-primary btn-sm" style="width:100%;" id="btn-add-member">Undang Anggota</button>
+            </div>
+            <h4>Daftar Anggota</h4>
+            <div id="group-members-list" class="members-list"></div>
+            <button class="btn-secondary" style="width: 100%; margin-top: 15px;" onclick="document.getElementById('modal-group-info').style.display='none'">Tutup</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-confirm" style="z-index: 300;">
+        <div class="modal modal-sm">
+            <h3 id="confirm-title">Konfirmasi</h3>
+            <p id="confirm-message" style="margin-bottom: 15px; color: #5f6368; font-size: 0.95rem;"></p>
+            <div id="confirm-input-area" style="display: none; gap: 8px; margin-bottom: 15px;">
+                <input type="number" id="confirm-input-val" placeholder="Angka..." min="1" style="flex: 1; margin-bottom: 0;">
+                <select id="confirm-input-unit" style="padding: 10px; border-radius: 8px; border: 1px solid #dadce0; outline: none;">
+                    <option value="minutes">Menit</option>
+                    <option value="hours">Jam</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-secondary" id="btn-confirm-cancel">Batal</button>
+                <button class="btn-primary btn-danger" id="btn-confirm-yes">Ya</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
