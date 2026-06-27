@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Chat - Album Media</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Web Chat - Mobile Friendly</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -39,7 +39,7 @@
                 <header class="sidebar-header">
                     <div id="profile-trigger" class="profile-trigger">
                         <div class="avatar" id="my-avatar">?</div>
-                        <div>
+                        <div class="header-text-area">
                             <h2>Pesan</h2>
                             <small id="current-user-info">Memuat...</small>
                         </div>
@@ -55,6 +55,8 @@
             <main class="chat-window">
                 <header class="chat-header" id="chat-header" style="display: none;">
                     <div class="chat-header-info">
+                        <!-- Tombol Kembali (Hanya Tampil di HP) -->
+                        <button class="btn-icon btn-back" id="btn-back-to-list" title="Kembali">❮</button>
                         <div class="avatar" id="chat-header-avatar">?</div>
                         <h2 id="chat-header-name">Pilih Percakapan</h2>
                     </div>
@@ -64,11 +66,11 @@
                 </header>
                 
                 <div id="kick-warning-banner" class="kick-warning-banner" style="display: none;">
-                    ⚠️ Anda akan dikeluarkan dari grup ini dalam waktu: <span id="kick-countdown">00:00:00</span>
+                    ⚠️ Dikeluarkan dalam waktu: <span id="kick-countdown">00:00:00</span>
                 </div>
 
                 <div class="chat-messages" id="chat-messages">
-                    <p style="text-align: center; color: #80868b; margin-top: 50px;">Pilih obrolan dari sebelah kiri.</p>
+                    <p class="desktop-only-msg" style="text-align: center; color: #80868b; margin-top: 50px;">Pilih obrolan dari sebelah kiri.</p>
                 </div>
                 <div id="loading-more" style="display: none; text-align: center; font-size: 0.8rem; color: #1a73e8; padding: 10px;">Memuat pesan lama...</div>
                 
@@ -82,6 +84,7 @@
         </div>
     </div>
 
+    <!-- Modals -->
     <div class="modal-overlay" id="modal-profile">
         <div class="modal" style="text-align: center;">
             <h3>Profil Saya</h3>
