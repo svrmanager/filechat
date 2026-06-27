@@ -236,7 +236,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// --- MANAJEMEN KONTAK ---
+// --- MANAJEMEN KONTAK & BUAT CHAT ---
 async function findUser(target) {
     const q = query(collection(db, "users"), where("username", "==", target));
     let snap = await getDocs(q);
@@ -342,11 +342,12 @@ function loadChats() {
     });
 }
 
-// --- RENDER PESAN & ALBUM MEDIA ---
+// --- RENDER PESAN & MOBILE VIEW TOGGLE ---
 window.openChat = async (chatId, chatData, name, photoUrl) => {
     currentChatId = chatId; currentChatData = chatData;
     messageLimit = 20; pendingUploads.clear();
     
+    document.getElementById('main-app').classList.add('chat-active'); // Mengaktifkan Tampilan Chat untuk Layar HP
     document.getElementById('chat-header').style.display = 'flex';
     document.getElementById('chat-input-area').style.display = 'flex';
     document.getElementById('chat-header-name').innerText = name;
@@ -357,6 +358,13 @@ window.openChat = async (chatId, chatData, name, photoUrl) => {
     checkAndExecuteKicks(chatId);
     subscribeToMessages();
 };
+
+// Tombol "Kembali" khusus di Layar Smartphone
+document.getElementById('btn-back-to-list').addEventListener('click', () => {
+    document.getElementById('main-app').classList.remove('chat-active');
+    currentChatId = null;
+    document.querySelectorAll('.chat-list-item').forEach(el => el.classList.remove('active'));
+});
 
 function handleKickBanner(chatData) {
     if(kickTimerInterval) clearInterval(kickTimerInterval);
@@ -390,6 +398,7 @@ async function checkAndExecuteKicks(chatId) {
             await updateDoc(doc(db, "chats", chatId), { participants: arrayRemove(uid), [`scheduledKicks.${uid}`]: deleteField() });
             if(uid === currentUser.uid) {
                 currentChatId = null;
+                document.getElementById('main-app').classList.remove('chat-active');
                 document.getElementById('chat-header').style.display = 'none'; document.getElementById('chat-input-area').style.display = 'none';
                 document.getElementById('chat-messages').innerHTML = '<p style="text-align: center; color: #ea4335; margin-top: 50px;">Anda dikeluarkan dari grup.</p>';
             }
@@ -427,13 +436,10 @@ window.askDirectChat = (uid, name) => {
     showConfirm(`Kirim pesan personal ke ${name}?`, () => { window.startDirectChat(uid, name); });
 };
 
-// FITUR BARU: Hapus Banyak Sekaligus (Batch)
 window.deleteMsgBatch = (idsString) => {
-    showConfirm("Hapus semua media di kelompok ini?", async () => {
+    showConfirm("Hapus media di kelompok ini?", async () => {
         const ids = idsString.split(',');
-        for(let id of ids) {
-            try { await deleteDoc(doc(db, "chats", currentChatId, "messages", id)); } catch(e) {}
-        }
+        for(let id of ids) { try { await deleteDoc(doc(db, "chats", currentChatId, "messages", id)); } catch(e) {} }
     });
 };
 
@@ -442,7 +448,6 @@ function renderAllMessages(maintainScroll = false) {
     chatWindow.innerHTML = '';
     currentMediaGallery = [];
     
-    // 1. Group Firestore Messages (Berdasarkan batchId & senderId)
     let groupedMessages = [];
     chatMessagesData.forEach(msg => {
         if (msg.batchId && groupedMessages.length > 0) {
@@ -457,7 +462,6 @@ function renderAllMessages(maintainScroll = false) {
         groupedMessages.push(newGroup);
     });
 
-    // 2. Group Pending Uploads (Agar tampilan Grid berfungsi sebelum selesai upload)
     let groupedPending = [];
     pendingUploads.forEach((data, uploadId) => {
         if (data.batchId && groupedPending.length > 0) {
@@ -469,7 +473,6 @@ function renderAllMessages(maintainScroll = false) {
 
     let lastDate = null; let localCounter = 0;
 
-    // Render Data yang Sudah Sukses di Database
     groupedMessages.forEach(msg => {
         const isMine = msg.senderId === currentUser.uid;
         const dateObj = msg.timestamp ? msg.timestamp.toDate() : new Date();
@@ -489,7 +492,6 @@ function renderAllMessages(maintainScroll = false) {
             html += `<div class="sender-name" style="color: ${getUserColor(msg.senderId)}" onclick="window.askDirectChat('${msg.senderId}', '${msg.senderName}')">${msg.senderName}</div>`;
         }
         
-        // RENDER ALBUM MEDIA
         if(msg.mediaList.length > 0) {
             let countClass = msg.mediaList.length >= 4 ? 4 : msg.mediaList.length;
             html += `<div class="media-album" data-count="${countClass}">`;
@@ -508,7 +510,6 @@ function renderAllMessages(maintainScroll = false) {
         if(msg.text) html += `<p>${msg.text}</p>`;
         html += `<div class="time-row"><span class="time">${timeStr}</span>`;
         if(isMine) {
-            // Tombol Hapus Grup (Bisa 1 atau banyak)
             const idsToDelete = msg.mediaList.length > 0 ? msg.mediaList.map(m => m.id).join(',') : msg.id;
             html += `<button class="btn-delete-msg" onclick="window.deleteMsgBatch('${idsToDelete}')">🗑️</button>`;
         }
@@ -517,7 +518,6 @@ function renderAllMessages(maintainScroll = false) {
         msgDiv.innerHTML = html; chatWindow.appendChild(msgDiv);
     });
 
-    // Render Data Pending Uploads
     groupedPending.forEach(group => {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message sent`;
@@ -551,7 +551,7 @@ function renderAllMessages(maintainScroll = false) {
     }
 }
 
-// --- UPLOAD LATAR BELAKANG BATCH PER-15 MEDIA ---
+// --- UPLOAD LATAR BELAKANG BATCH ---
 const fileInput = document.getElementById('file-input');
 
 fileInput.addEventListener('change', (e) => {
@@ -573,7 +573,6 @@ window.cancelUpload = (uploadId) => {
 async function processBackgroundUploads(files) {
     if(!currentChatId) return;
     
-    // PEMBAGIAN KELOMPOK (Maksimal 15 per grup)
     const CHUNK_SIZE = 15;
     
     for (let i = 0; i < files.length; i += CHUNK_SIZE) {
